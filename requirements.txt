@@ -1,0 +1,7 @@
+datasets
+accelerate
+transformers
+huggingface_hub[cli]
+spacy
+matplotlib
+vllm
