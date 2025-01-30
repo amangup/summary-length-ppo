@@ -1,3 +1,4 @@
+torch
 datasets
 accelerate
 transformers
@@ -5,3 +6,4 @@ huggingface_hub[cli]
 spacy
 matplotlib
 vllm
+rouge-score

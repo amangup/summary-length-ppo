@@ -143,8 +143,7 @@ def dataloader(model, device, ds, start, end):
     return X[:, outputs.shape[1]-1:], Y[:, outputs.shape[1]-1:], R[:, outputs.shape[1]-1:]
 
 
-def eval(model, device, eval_ds):
-    eval_ds = eval_ds.select(range(0, 256))
+def eval_reward_metrics(model, device, eval_ds):
     responses = eval_ds.map(lambda batch: generate_responses(model, device, batch),
                             batch_size=512, batched=True, input_columns=['tokens'])
     rewards = responses.map(lambda c1, c2: get_reward(c1, c2, False), batched=True, batch_size=512,
@@ -174,6 +173,8 @@ def training_loop(rank, world_size, loss_queue, eval_queue):
     device = torch.device(f"cuda:{rank}")
 
     train_ds, eval_ds = get_data_shard(rank, world_size)
+    eval_ds = eval_ds.select(range(0, 256))
+    
     model = AutoModelForCausalLM.from_pretrained(model_id, torch_dtype=torch.bfloat16, device_map={"": rank})
     model.generation_config.pad_token_id = tokenizer.pad_token_id
     
@@ -210,7 +211,7 @@ def training_loop(rank, world_size, loss_queue, eval_queue):
 
                     if effective_step % eval_interval == 0:
                         print(f"Running eval...")
-                        ldiff_mean, ldiff_std = eval(model, device, eval_ds)
+                        ldiff_mean, ldiff_std = eval_reward_metrics(model, device, eval_ds)
                         print(f"Eval results -- Length diff mean: {ldiff_mean}, Length diff std dev: {ldiff_std}")
 
                         eval_queue.put((effective_step, ldiff_mean, ldiff_std))
